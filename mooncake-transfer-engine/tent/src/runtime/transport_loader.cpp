@@ -21,6 +21,10 @@
 #include "tent/transport/rdma/rdma_transport.h"
 #endif
 
+#ifdef USE_UB
+#include "tent/transport/ub/ub_transport.h"
+#endif
+
 #ifdef USE_CUDA
 #include "tent/transport/nvlink/nvlink_transport.h"
 #include "tent/transport/mnnvl/mnnvl_transport.h"
@@ -46,8 +50,16 @@
 #include "tent/transport/tpu/tpu_transport.h"
 #endif
 
+#ifdef USE_XPU
+#include "tent/transport/xpu/xpu_transport.h"
+#endif
+
 #ifdef USE_MPCOMM
 #include "tent/transport/mpcomm/mpcomm_transport.h"
+#endif
+
+#ifdef USE_HYLINK
+#include "tent/transport/hylink/hylink_transport.h"
 #endif
 
 namespace mooncake {
@@ -70,6 +82,13 @@ Status TransferEngineImpl::loadTransports() {
     if (conf_->get("transports/rdma/enable", true) &&
         topology_->getNicCount(Topology::NIC_RDMA)) {
         transport_list_[RDMA] = std::make_shared<RdmaTransport>();
+    }
+#endif
+
+#ifdef USE_UB
+    if (conf_->get("transports/ub/enable", false) &&
+        topology_->getNicCount(Topology::NIC_UB)) {
+        transport_list_[UB] = std::make_shared<UbTransport>();
     }
 #endif
 
@@ -113,9 +132,19 @@ Status TransferEngineImpl::loadTransports() {
         transport_list_[TPU] = std::make_shared<TpuTransport>();
 #endif
 
+#ifdef USE_XPU
+    if (conf_->get("transports/xpu/enable", true))
+        transport_list_[XPU] = std::make_shared<XpuTransport>();
+#endif
+
 #ifdef USE_MPCOMM
     if (conf_->get("transports/mpcomm/enable", true))
         transport_list_[MPCOMM] = std::make_shared<MpcommTransport>();
+#endif
+
+#ifdef USE_HYLINK
+    if (conf_->get("transports/hylink/enable", false))
+        transport_list_[HYLINK] = std::make_shared<HylinkTransport>();
 #endif
 
     return Status::OK();
