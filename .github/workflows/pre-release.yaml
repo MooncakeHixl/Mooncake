@@ -141,7 +141,16 @@ jobs:
           echo "Latest CANN version: ${CANN_VERSION}"
           CANN_URL="${CANN_BASE_URL}/${CANN_VERSION}/${{ matrix.cann_arch }}/Ascend-cann-toolkit_${CANN_VERSION}_linux-${{ matrix.cann_arch }}.run"
           echo "Downloading CANN ${CANN_VERSION} from ${CANN_URL}"
-          wget -q --show-progress -O /tmp/cann_toolkit.run "${CANN_URL}"
+          # fork-verify: the Huawei CDN stalls mid-transfer (observed twice at
+          # ~990MB with both parallel legs frozen simultaneously); wget without
+          # read-timeouts hangs forever. Retry with resume.
+          for attempt in 1 2 3 4 5 6 7 8; do
+            wget -c -q --show-progress --tries=2 --timeout=30 --read-timeout=30 \
+              -O /tmp/cann_toolkit.run "${CANN_URL}" && break
+            echo "::warning::CANN download attempt ${attempt} failed/stalled; retrying with resume"
+            sleep 15
+          done
+          test -s /tmp/cann_toolkit.run || {{ echo "CANN download failed after retries"; exit 1; }}
           chmod +x /tmp/cann_toolkit.run
           sudo /tmp/cann_toolkit.run --install --install-for-all --install-path=/usr/local/Ascend --quiet
           rm -f /tmp/cann_toolkit.run
