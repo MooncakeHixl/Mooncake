@@ -69,7 +69,6 @@ jobs:
   build-npu:
     name: Build NPU wheels (${{ matrix.arch }}, py${{ matrix.python-version }})
     needs: version-stamp
-    timeout-minutes: 60
     strategy:
       fail-fast: false
       # Match the stable release-npu pipeline: at most two toolchain-heavy
@@ -113,27 +112,6 @@ jobs:
           "$PYTHON_BIN" --version
           echo "PYTHON_BIN=${PYTHON_BIN}" >> "$GITHUB_ENV"
 
-      # fork-verify: log the baseline memory/swap state (diagnostics for the
-      # death-during-mooncake-store-compile pattern), then add extra swap.
-      # The runner image already ships an active /swapfile, so use a new path
-      # and never let this step block the build.
-      - name: Inspect memory and add swap
-        shell: bash
-        run: |
-          set -uo pipefail
-          echo "=== baseline ==="
-          free -h || true
-          sudo swapon --show || true
-          cat /proc/meminfo | grep -E "MemTotal|MemAvailable|SwapTotal|SwapFree" || true
-          echo "=== adding 8G extra swap on /mnt (root fs must stay free for CANN) ==="
-          df -h / /mnt || true
-          sudo fallocate -l 8G /mnt/swapfile2 || dd if=/dev/zero of=/mnt/swapfile2 bs=1M count=8192
-          sudo chmod 600 /mnt/swapfile2
-          sudo mkswap /mnt/swapfile2
-          sudo swapon /mnt/swapfile2 || echo "::warning::extra swapon failed, continuing with existing swap"
-          free -h || true
-          df -h / /mnt || true
-
       - name: Install CANN Toolkit
         shell: bash
         run: |
@@ -143,16 +121,7 @@ jobs:
           echo "Latest CANN version: ${CANN_VERSION}"
           CANN_URL="${CANN_BASE_URL}/${CANN_VERSION}/${{ matrix.cann_arch }}/Ascend-cann-toolkit_${CANN_VERSION}_linux-${{ matrix.cann_arch }}.run"
           echo "Downloading CANN ${CANN_VERSION} from ${CANN_URL}"
-          # fork-verify: the Huawei CDN stalls mid-transfer (observed twice at
-          # ~990MB with both parallel legs frozen simultaneously); wget without
-          # read-timeouts hangs forever. Retry with resume.
-          for attempt in 1 2 3 4 5 6 7 8; do
-            wget -c -q --show-progress --tries=2 --timeout=30 --read-timeout=30 \
-              -O /tmp/cann_toolkit.run "${CANN_URL}" && break
-            echo "::warning::CANN download attempt ${attempt} failed/stalled; retrying with resume"
-            sleep 15
-          done
-          test -s /tmp/cann_toolkit.run || { echo "CANN download failed after retries"; exit 1; }
+          wget -q --show-progress -O /tmp/cann_toolkit.run "${CANN_URL}"
           chmod +x /tmp/cann_toolkit.run
           sudo /tmp/cann_toolkit.run --install --install-for-all --install-path=/usr/local/Ascend --quiet
           rm -f /tmp/cann_toolkit.run
@@ -168,10 +137,6 @@ jobs:
           cd /tmp
           git clone https://gitcode.com/cann/hixl.git
           cd hixl
-          # fork-verify: pin to the last proven-good toolchain (built fine on
-          # 2026-10-20); master tip 43adf7da coincides with every runner
-          # freeze/death since 2026-10-26.
-          git checkout a6f60d2
           bash build.sh -j$(nproc)
           sudo ./build_out/cann-hixl_*.run --full --quiet --pylocal --install-path=/usr/local/Ascend
 
