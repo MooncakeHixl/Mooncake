@@ -14,7 +14,8 @@ on:
 jobs:
   version-stamp:
     name: Normalize pre-release version
-    if: github.repository == 'kvcache-ai/Mooncake'
+    # fork-verify: also runs on MooncakeHixl/Mooncake
+    if: github.repository_owner == 'kvcache-ai' || github.repository_owner == 'MooncakeHixl'
     runs-on: ubuntu-22.04
     permissions:
       contents: read
@@ -50,24 +51,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # fork-verify: trimmed to two combos
           - variant: cuda
             architecture: x86_64
             artifact-prefix: mooncake-wheel-pre-release
-          - variant: cuda
-            architecture: arm64
-            artifact-prefix: mooncake-wheel-arm64-pre-release
-          - variant: cuda13
-            architecture: x86_64
-            artifact-prefix: mooncake-wheel-cuda13-pre-release
           - variant: cuda13
             architecture: arm64
             artifact-prefix: mooncake-wheel-cuda13-arm64-pre-release
-          - variant: non-cuda
-            architecture: x86_64
-            artifact-prefix: mooncake-wheel-non-cuda-pre-release
-          - variant: non-cuda
-            architecture: arm64
-            artifact-prefix: mooncake-wheel-non-cuda-arm64-pre-release
     uses: ./.github/workflows/_build-wheel.yaml
     with:
       variant: ${{ matrix.variant }}
@@ -85,8 +75,12 @@ jobs:
       # jobs in flight, bounding CDN load and runner-recycling exposure.
       max-parallel: 2
       matrix:
+        # fork-verify: trimmed to three legs
         arch: [aarch64, x86_64]
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.10', '3.12']
+        exclude:
+          - arch: x86_64
+            python-version: '3.10'
         include:
           - arch: aarch64
             runner: ubuntu-22.04-arm
@@ -239,6 +233,8 @@ jobs:
 
   publish-testpypi:
     name: Validate and publish wheels to TestPyPI
+    # fork-verify: skipped (fork has no TESTPYPI_API_TOKEN)
+    if: github.repository == 'kvcache-ai/Mooncake'
     needs: [version-stamp, build]
     runs-on: ubuntu-22.04
     environment: nightly
@@ -359,7 +355,7 @@ jobs:
           python-version: '3.12'
 
       - name: Require TestPyPI credentials
-        if: env.PUBLISH_NPU == 'yes'
+        if: env.PUBLISH_NPU == 'yes' && github.repository == 'kvcache-ai/Mooncake'
         env:
           TESTPYPI_API_TOKEN: ${{ secrets.TESTPYPI_API_TOKEN }}
         run: |
@@ -385,7 +381,7 @@ jobs:
           fail_on_unmatched_files: true
 
       - name: Publish NPU wheels to TestPyPI
-        if: env.PUBLISH_NPU == 'yes'
+        if: env.PUBLISH_NPU == 'yes' && github.repository == 'kvcache-ai/Mooncake'
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.TESTPYPI_API_TOKEN }}
