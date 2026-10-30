@@ -137,6 +137,10 @@ jobs:
           cd /tmp
           git clone https://gitcode.com/cann/hixl.git
           cd hixl
+          # fork-verify: pin to the last proven-good toolchain (built fine on
+          # 2026-10-20); master tip 43adf7da coincides with every runner
+          # freeze/death since 2026-10-26.
+          git checkout a6f60d2
           bash build.sh -j$(nproc)
           sudo ./build_out/cann-hixl_*.run --full --quiet --pylocal --install-path=/usr/local/Ascend
 
