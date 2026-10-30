@@ -152,7 +152,7 @@ jobs:
             echo "::warning::CANN download attempt ${attempt} failed/stalled; retrying with resume"
             sleep 15
           done
-          test -s /tmp/cann_toolkit.run || {{ echo "CANN download failed after retries"; exit 1; }}
+          test -s /tmp/cann_toolkit.run || { echo "CANN download failed after retries"; exit 1; }
           chmod +x /tmp/cann_toolkit.run
           sudo /tmp/cann_toolkit.run --install --install-for-all --install-path=/usr/local/Ascend --quiet
           rm -f /tmp/cann_toolkit.run
