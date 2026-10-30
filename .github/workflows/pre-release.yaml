@@ -69,6 +69,7 @@ jobs:
   build-npu:
     name: Build NPU wheels (${{ matrix.arch }}, py${{ matrix.python-version }})
     needs: version-stamp
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       # Match the stable release-npu pipeline: at most two toolchain-heavy
@@ -111,6 +112,19 @@ jobs:
           PYTHON_BIN="$(command -v python${{ matrix.python-version }})"
           "$PYTHON_BIN" --version
           echo "PYTHON_BIN=${PYTHON_BIN}" >> "$GITHUB_ENV"
+
+      # fork-verify: the bare-metal mooncake-store compile (Ascend headers,
+      # ~3-4GB per TU) at -j4 sits right at the 16GB runner limit; memory
+      # pressure correlates with every runner death. Swap absorbs spikes.
+      - name: Add swap space
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo fallocate -l 16G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
 
       - name: Install CANN Toolkit
         shell: bash
@@ -174,7 +188,9 @@ jobs:
           export CMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH:-}"
           source /usr/local/Ascend/cann/set_env.sh
           cd build
-          cmake --build . -j"$(nproc)"
+          # fork-verify: cap mooncake parallelism; -j4 x ~3-4GB store TUs
+          # exceeds the 16GB runner and gets the job killed mid-compile.
+          cmake --build . -j2
           sudo cmake --install .
 
       - name: Generate Python version tag
