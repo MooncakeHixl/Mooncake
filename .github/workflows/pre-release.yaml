@@ -125,12 +125,14 @@ jobs:
           free -h || true
           sudo swapon --show || true
           cat /proc/meminfo | grep -E "MemTotal|MemAvailable|SwapTotal|SwapFree" || true
-          echo "=== adding 12G extra swap ==="
-          sudo fallocate -l 12G /swapfile2 || dd if=/dev/zero of=/swapfile2 bs=1M count=12288
-          sudo chmod 600 /swapfile2
-          sudo mkswap /swapfile2
-          sudo swapon /swapfile2 || echo "::warning::extra swapon failed, continuing with existing swap"
+          echo "=== adding 8G extra swap on /mnt (root fs must stay free for CANN) ==="
+          df -h / /mnt || true
+          sudo fallocate -l 8G /mnt/swapfile2 || dd if=/dev/zero of=/mnt/swapfile2 bs=1M count=8192
+          sudo chmod 600 /mnt/swapfile2
+          sudo mkswap /mnt/swapfile2
+          sudo swapon /mnt/swapfile2 || echo "::warning::extra swapon failed, continuing with existing swap"
           free -h || true
+          df -h / /mnt || true
 
       - name: Install CANN Toolkit
         shell: bash
