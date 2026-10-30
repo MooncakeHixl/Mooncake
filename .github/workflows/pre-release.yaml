@@ -113,18 +113,24 @@ jobs:
           "$PYTHON_BIN" --version
           echo "PYTHON_BIN=${PYTHON_BIN}" >> "$GITHUB_ENV"
 
-      # fork-verify: the bare-metal mooncake-store compile (Ascend headers,
-      # ~3-4GB per TU) at -j4 sits right at the 16GB runner limit; memory
-      # pressure correlates with every runner death. Swap absorbs spikes.
-      - name: Add swap space
+      # fork-verify: log the baseline memory/swap state (diagnostics for the
+      # death-during-mooncake-store-compile pattern), then add extra swap.
+      # The runner image already ships an active /swapfile, so use a new path
+      # and never let this step block the build.
+      - name: Inspect memory and add swap
         shell: bash
         run: |
-          set -euo pipefail
-          sudo fallocate -l 16G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
-          free -h
+          set -uo pipefail
+          echo "=== baseline ==="
+          free -h || true
+          sudo swapon --show || true
+          cat /proc/meminfo | grep -E "MemTotal|MemAvailable|SwapTotal|SwapFree" || true
+          echo "=== adding 12G extra swap ==="
+          sudo fallocate -l 12G /swapfile2 || dd if=/dev/zero of=/swapfile2 bs=1M count=12288
+          sudo chmod 600 /swapfile2
+          sudo mkswap /swapfile2
+          sudo swapon /swapfile2 || echo "::warning::extra swapon failed, continuing with existing swap"
+          free -h || true
 
       - name: Install CANN Toolkit
         shell: bash
