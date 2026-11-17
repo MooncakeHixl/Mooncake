@@ -655,6 +655,7 @@ ${AUDITWHEEL_CMD} repair ${OUTPUT_DIR}/*.whl \
     --exclude libc_sec.so* \
     --exclude libhccl_alg.so* \
     --exclude libhccl_plf.so* \
+    --exclude libccl_dpu.so* \
     --exclude libascend_protobuf.so* \
     --exclude libhybrid_executor.so* \
     --exclude libdavinci_executor.so* \
