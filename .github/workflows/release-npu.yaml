@@ -108,6 +108,7 @@ jobs:
           cd build
           cmake_args=(
             -DUSE_ASCEND_DIRECT=ON
+            -DUSE_TENT=ON
             -DUSE_ETCD=ON
             -DSTORE_USE_ETCD=ON
             -DBUILD_UNIT_TESTS=OFF
