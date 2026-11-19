@@ -211,12 +211,16 @@ if [ -f ${BUILD_DIR}/mooncake-transfer-engine/src/libtransfer_engine.so ]; then
     cp ${BUILD_DIR}/mooncake-transfer-engine/src/libtransfer_engine.so mooncake-wheel/mooncake/libtransfer_engine.so
 fi
 
-# Copy TENT artifacts for the memfabric wheel.
-if [ "${MEMFABRIC_BUILD:-0}" = "1" ]; then
+# Copy TENT artifacts when the TENT transport was built (USE_TENT=ON).
+if [ -f "${BUILD_DIR}/mooncake-transfer-engine/tent/src/libtent_shared.so" ]; then
     echo "Copying TENT libraries and Python extension..."
     cp "${BUILD_DIR}/mooncake-transfer-engine/tent/src/libtent_shared.so" mooncake-wheel/mooncake/
-    cp "${BUILD_DIR}/mooncake-transfer-engine/tent/src/metrics/libtent_metrics.so" mooncake-wheel/mooncake/
-    cp "${BUILD_DIR}"/mooncake-transfer-engine/tent/src/python/tent.cpython-*.so mooncake-wheel/mooncake/
+    if [ -f "${BUILD_DIR}/mooncake-transfer-engine/tent/src/metrics/libtent_metrics.so" ]; then
+        cp "${BUILD_DIR}/mooncake-transfer-engine/tent/src/metrics/libtent_metrics.so" mooncake-wheel/mooncake/
+    fi
+    if compgen -G "${BUILD_DIR}/mooncake-transfer-engine/tent/src/python/tent.cpython-*.so" >/dev/null; then
+        cp "${BUILD_DIR}"/mooncake-transfer-engine/tent/src/python/tent.cpython-*.so mooncake-wheel/mooncake/
+    fi
 fi
 
 # Copy ascend_transport.so to mooncake directory (only when USE_ASCEND_DIRECT or USE_ASCEND is set)
@@ -747,6 +751,7 @@ ${AUDITWHEEL_CMD} repair ${OUTPUT_DIR}/*.whl \
     --exclude libc_sec.so* \
     --exclude libhccl_alg.so* \
     --exclude libhccl_plf.so* \
+    --exclude libccl_dpu.so* \
     --exclude libascend_protobuf.so* \
     --exclude libhybrid_executor.so* \
     --exclude libdavinci_executor.so* \
