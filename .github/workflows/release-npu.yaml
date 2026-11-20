@@ -35,6 +35,7 @@ jobs:
 
     env:
       NPU_BUILD: "1"
+      GOEXPERIMENT: "norandomizedheapbase64"
 
     steps:
       - name: Checkout code
@@ -157,7 +158,7 @@ jobs:
           path: mooncake-wheel/dist-npu-py${{ steps.generate_tag_release.outputs.python_version_tag }}/*.whl
 
   publish-release:
-    if: ${{ (github.event_name == 'push' && !contains(github.ref_name, '-')) || (github.event_name == 'workflow_dispatch' && startsWith(inputs.tag, 'v') && !contains(inputs.tag, '-')) }}
+    if: false  # build-only: artifacts only, do not create release or publish
     needs: build
     runs-on: ubuntu-22.04
     environment: pypi
